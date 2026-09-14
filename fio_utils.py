@@ -158,7 +158,8 @@ def decline_surname(fam: str, gender: str):
 
 # --- основная функция --------------------------------------------------------
 
-def process_fio(raw: str, strict: bool = False, fix_case: bool = True) -> FioResult:
+def process_fio(raw: str, strict: bool = False, fix_case: bool = True,
+                spell: bool = False) -> FioResult:
     original = _clean(raw)
 
     empty = FioResult(original, "", "", "", "", "", "", "", "unknown", "error", "")
@@ -195,6 +196,20 @@ def process_fio(raw: str, strict: bool = False, fix_case: bool = True) -> FioRes
 
     if fix_case:
         fam, name, otch = _cap(fam), _cap(name), _cap(otch)
+
+    if spell:
+        from spell_utils import correct_name, correct_patronymic
+        new_name, ch1 = correct_name(name)
+        new_otch, ch2 = correct_patronymic(otch)
+        fixes = []
+        if ch1:
+            fixes.append(f"{name} → {new_name}")
+            name = new_name
+        if ch2:
+            fixes.append(f"{otch} → {new_otch}")
+            otch = new_otch
+        if fixes:
+            comment = "; ".join(x for x in (comment, "; ".join(fixes)) if x)
 
     gender = detect_gender(otch)
 
@@ -239,8 +254,9 @@ def process_fio(raw: str, strict: bool = False, fix_case: bool = True) -> FioRes
     )
 
 
-def process_many(rows: List[str], strict: bool = False, fix_case: bool = True) -> List[FioResult]:
-    return [process_fio(r, strict=strict, fix_case=fix_case) for r in rows]
+def process_many(rows: List[str], strict: bool = False, fix_case: bool = True,
+                 spell: bool = False) -> List[FioResult]:
+    return [process_fio(r, strict=strict, fix_case=fix_case, spell=spell) for r in rows]
 
 
 GENDER_RU = {"male": "муж.", "female": "жен.", "unknown": "не определён"}
